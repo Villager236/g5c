@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>GooDz5 – Guild Stats</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#05070d;--surf:#0b0f1a;--surf2:#111827;--surf3:#172035;
+      --border:rgba(96,160,255,0.07);--border2:rgba(96,160,255,0.13);
+      --text:#d8e0f0;--muted:#526080;
+      --accent:#4f8af7;--accent2:#7c5ff5;
+      --gold:#f0b429;--green:#36c98a;--red:#f55f5f;--orange:#f5964a;
+      --cyan:#36c9d8;--purple:#b87cf0;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+    #bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+    .glow{position:fixed;z-index:0;pointer-events:none;border-radius:50%;filter:blur(90px)}
+    .glow-1{width:600px;height:600px;top:-200px;right:-150px;background:radial-gradient(circle,rgba(79,138,247,.08) 0%,transparent 70%)}
+    .glow-2{width:500px;height:500px;bottom:-100px;left:-100px;background:radial-gradient(circle,rgba(124,95,245,.06) 0%,transparent 70%)}
+    .glow-3{width:320px;height:320px;top:42%;left:44%;background:radial-gradient(circle,rgba(54,201,138,.035) 0%,transparent 70%)}
+    .wrap{max-width:1380px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    /* HEADER */
+    header{padding:20px 0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+    .logo{display:flex;align-items:center;gap:11px}
+    .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:17px;color:#fff;flex-shrink:0}
+    .logo-text{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:1px}
+    .logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+    .hdr-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    input[type="password"]{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;padding:8px 13px;outline:none;transition:border-color .18s;width:270px}
+    input[type="password"]:focus{border-color:var(--accent)}
+    .btn{background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;padding:8px 18px;cursor:pointer;transition:opacity .18s,transform .1s;white-space:nowrap}
+    .btn:hover{opacity:.83}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.3;cursor:not-allowed}
+    .btn-ghost{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;padding:8px 14px;cursor:pointer;transition:all .18s;white-space:nowrap}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+    #refresh-btn{display:none}
+    .badge-cache{font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:4px 10px;display:none}
+    .badge-cache.on{display:inline-block}
+
+    /* STATUS */
+    #status-bar{margin:10px 0;padding:9px 15px;border-radius:8px;font-size:13px;display:none}
+    #status-bar.info{background:rgba(79,138,247,.09);color:var(--accent);border:1px solid rgba(79,138,247,.2);display:block}
+    #status-bar.error{background:rgba(245,95,95,.09);color:var(--red);border:1px solid rgba(245,95,95,.2);display:block}
+    #status-bar.success{background:rgba(54,201,138,.09);color:var(--green);border:1px solid rgba(54,201,138,.2);display:block}
+
+    /* DASHBOARD */
+    #dashboard{display:none;animation:fadeUp .4s ease}
+    #dashboard.on{display:block}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+    /* GUILD BANNER */
+    .guild-banner{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:22px 26px;margin:18px 0 14px;display:flex;align-items:flex-start;gap:20px;position:relative;overflow:hidden}
+    .guild-banner::before{content:'';position:absolute;top:-90px;right:-90px;width:280px;height:280px;background:radial-gradient(circle,rgba(79,138,247,.07) 0%,transparent 70%);pointer-events:none}
+    .g-icon{width:60px;height:60px;flex-shrink:0;background:linear-gradient(135deg,var(--surf3),var(--surf2));border:2px solid var(--border2);border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:24px;color:var(--gold)}
+    .g-info{flex:1;min-width:0}
+    .g-name{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:1.2px}
+    .g-tag{display:inline-block;background:rgba(79,138,247,.12);border:1px solid rgba(79,138,247,.25);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:500;color:var(--accent);letter-spacing:1px;margin-left:8px;vertical-align:middle}
+    .g-desc{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.55}
+    .g-stats-row{display:flex;gap:22px;margin-top:11px;flex-wrap:wrap}
+    .gst{display:flex;flex-direction:column}
+    .gst-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+    .gst-val{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:600;color:var(--text);margin-top:1px}
+    .gst-val.gold{color:var(--gold)}.gst-val.green{color:var(--green)}
+    .xp-wrap{margin-top:11px;width:100%;max-width:400px}
+    .xp-lbl-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+    .xp-bg{background:var(--surf3);border-radius:99px;height:6px;overflow:hidden}
+    .xp-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .9s cubic-bezier(.4,0,.2,1)}
+
+    /* SECTION TITLE */
+    .sec-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:18px 0 9px;display:flex;align-items:center;gap:8px}
+    .sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* TABLE */
+    .tbl-wrap{background:var(--surf);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:36px}
+    .tbl-bar{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .tb-search{flex:1;min-width:130px;max-width:190px;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;padding:7px 11px;outline:none;transition:border-color .18s}
+    .tb-search:focus{border-color:var(--accent)}
+    .tb-sel{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;padding:7px 11px;outline:none;cursor:pointer}
+    .sort-btn{background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:11px;padding:6px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
+    .sort-btn:hover,.sort-btn.act{border-color:var(--accent);color:var(--accent)}
+    .mbr-count{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+    .tbl-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:680px}
+    thead th{padding:8px 13px;font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;text-align:left;background:var(--surf2);border-bottom:1px solid var(--border);white-space:nowrap}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:rgba(255,255,255,.012)}
+    tbody td{padding:9px 13px;font-size:13px}
+
+    /* RANK BADGES */
+    .rb{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:500;letter-spacing:.4px;white-space:nowrap}
+    .rb-guild_master{background:rgba(240,180,41,.13);color:var(--gold);border:1px solid rgba(240,180,41,.26)}
+    .rb-srmod{background:rgba(184,124,240,.12);color:var(--purple);border:1px solid rgba(184,124,240,.26)}
+    .rb-team{background:rgba(79,138,247,.11);color:var(--accent);border:1px solid rgba(79,138,247,.24)}
+    .rb-loyal{background:rgba(54,201,138,.10);color:var(--green);border:1px solid rgba(54,201,138,.22)}
+    .rb-stammspieler{background:rgba(54,201,216,.09);color:var(--cyan);border:1px solid rgba(54,201,216,.22)}
+    .rb-member{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--border2)}
+
+    .pname{font-weight:500;color:var(--text)}
+    .pill{display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:500;background:rgba(255,255,255,.04);color:var(--muted);white-space:nowrap}
+    .pill.hi{background:rgba(54,201,138,.10);color:var(--green)}
+    .pill.md{background:rgba(245,150,74,.10);color:var(--orange)}
+
+    .sc-link{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--accent);text-decoration:none;background:rgba(79,138,247,.08);border:1px solid rgba(79,138,247,.2);border-radius:5px;padding:3px 8px;transition:all .15s;white-space:nowrap}
+    .sc-link:hover{background:rgba(79,138,247,.16)}
+    .spinner{display:inline-block;width:10px;height:10px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:3px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-row td{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+
+    /* PAGER */
+    .pager{padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+    .pg-btn{background:var(--surf2);border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;padding:4px 9px;cursor:pointer;transition:all .13s;font-family:'Outfit',sans-serif}
+    .pg-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .pg-btn.act{background:var(--accent);border-color:var(--accent);color:#fff}
+    .pg-info{font-size:11px;color:var(--muted);margin-left:auto}
+
+    /* SETUP HINT */
+    .setup-hint{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin:28px 0;max-width:560px}
+    .setup-hint h2{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;margin-bottom:9px}
+    .setup-hint p{font-size:13px;color:var(--muted);line-height:1.7}
+    .setup-hint a{color:var(--accent);text-decoration:none}
+    .setup-hint a:hover{text-decoration:underline}
+    .setup-hint ol{font-size:13px;color:var(--muted);line-height:1.9;padding-left:18px;margin-top:9px}
+    .note-box{margin-top:11px;padding:9px 13px;background:rgba(79,138,247,.07);border:1px solid rgba(79,138,247,.18);border-radius:7px;font-size:12px;color:var(--accent);line-height:1.65}
+    code{font-size:11px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px}
+
+    @media(max-width:860px){
+      header{flex-direction:column;align-items:flex-start}
+      input[type="password"]{width:100%}
+      .guild-banner{flex-direction:column;gap:14px}
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">G</div>
+      <div>
+        <div class="logo-text">GooDz5 Stats</div>
+        <div class="logo-sub">Hypixel Skyblock Guild</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <span class="badge-cache" id="cache-badge">🗄 Cache</span>
+      <input type="password" id="api-input" placeholder="Hypixel API Key "/>
+      <button class="btn-ghost" id="refresh-btn" onclick="loadGuild(true)">↻ Refresh</button>
+      <button class="btn" id="load-btn" onclick="loadGuild(false)">Laden</button>
+    </div>
+  </header>
+
+  <div id="status-bar"></div>
+
+  <div class="setup-hint" id="setup-hint">
+    <h2>🔑 Erste Schritte</h2>
+    <p>Wenn Daten im Cache sind, lädt die Seite automatisch. Beim ersten Mal brauchst du einen Hypixel API-Key:</p>
+    <ol>
+      <li>Gehe zu <a href="https://developer.hypixel.net/dashboard" target="_blank">developer.hypixel.net/dashboard</a></li>
+      <li>Klicke <strong>Create API Key</strong> → Personal App → dauerhafter Key</li>
+      <li>Füge ihn oben ein und klicke <strong>Laden</strong> — danach läuft alles aus dem Cache</li>
+    </ol>
+    <div class="note-box">
+      ℹ️ Key wird als <code>API-Key</code>-Header gesendet (Hypixel v2 Auth). Daten werden 10 min gecacht — danach reicht ein Klick auf <strong>↻ Refresh</strong>.
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="guild-banner">
+      <div class="g-icon" id="g-icon">G</div>
+      <div class="g-info">
+        <div><span class="g-name" id="g-name">—</span><span class="g-tag" id="g-tag">—</span></div>
+        <div class="g-desc" id="g-desc">—</div>
+        <div class="g-stats-row">
+          <div class="gst"><span class="gst-lbl">Mitglieder</span><span class="gst-val green" id="s-mem">—</span></div>
+          <div class="gst"><span class="gst-lbl">Guild Level</span><span class="gst-val gold" id="s-lvl">—</span></div>
+          <div class="gst"><span class="gst-lbl">Total XP</span><span class="gst-val" id="s-xp">—</span></div>
+          <div class="gst"><span class="gst-lbl">Gegründet</span><span class="gst-val" id="s-crt">—</span></div>
+        </div>
+        <div class="xp-wrap">
+          <div class="xp-lbl-row">
+            <span>Level <span id="xp-cur">—</span> → <span id="xp-nxt">—</span></span>
+            <span id="xp-prg">— / —</span>
+          </div>
+          <div class="xp-bg"><div class="xp-fill" id="xp-fill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-title">Mitglieder</div>
+
+    <div class="tbl-wrap">
+      <div class="tbl-bar">
+        <input class="tb-search" id="search-input" placeholder="Spieler suchen…" oninput="doFilter()"/>
+        <select class="tb-sel" id="rank-filter" onchange="doFilter()">
+          <option value="">Alle Ränge</option>
+          <option value="guild_master">Guild Master</option>
+          <option value="srmod">Srmod</option>
+          <option value="team">Team</option>
+          <option value="loyal">Loyal</option>
+          <option value="stammspieler">Stammspieler</option>
+          <option value="member">Member</option>
+        </select>
+        <button class="sort-btn act" id="sb-weekXP"  onclick="setSort('weekXP')">XP Woche ↓</button>
+        <button class="sort-btn"    id="sb-dailyXP" onclick="setSort('dailyXP')">XP Heute</button>
+        <button class="sort-btn"    id="sb-name"    onclick="setSort('name')">Name</button>
+        <span class="mbr-count" id="mbr-count">0 / 125</span>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+          <tr>
+            <th>#</th><th>Spieler</th><th>Rang</th>
+            <th>XP Woche</th><th>XP Heute</th>
+            <th>SkyCrypt</th><th>Beigetreten</th>
+          </tr>
+          </thead>
+          <tbody id="tbody">
+          <tr class="loading-row"><td colspan="7">Lade Daten…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STAR BACKGROUND -->
+<script>
+  (function(){
+    const cv=document.getElementById('bg-canvas'),ctx=cv.getContext('2d');
+    let W,H,pts=[];
+    function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;init()}
+    function init(){
+      pts=[];
+      const n=Math.floor((W*H)/13000);
+      for(let i=0;i<n;i++) pts.push({
+        x:Math.random()*W,y:Math.random()*H,
+        vx:(Math.random()-.5)*.12,vy:(Math.random()-.5)*.12,
+        r:Math.random()*1.1+.25,op:Math.random()*.45+.1
+      });
+    }
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      for(const p of pts){
+        p.x+=p.vx;p.y+=p.vy;
+        if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+        ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(120,165,255,${p.op})`;ctx.fill();
+      }
+      for(let i=0;i<pts.length;i++){
+        for(let j=i+1;j<pts.length;j++){
+          const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+          if(d<85){
+            ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+            ctx.strokeStyle=`rgba(79,138,247,${.055*(1-d/85)})`;ctx.lineWidth=.35;ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    window.addEventListener('resize',resize);resize();draw();
+  })();
+</script>
+
+<!-- MAIN APP -->
+<script>
+  const G_THRESH=[100000,150000,250000,500000,750000,1000000,1250000,1500000,2000000,2500000,2500000,2500000,2500000,3000000];
+  function guildLevel(totalExp){
+    let exp=totalExp,level=1;
+    for(let i=0;i<G_THRESH.length;i++){
+      if(exp>=G_THRESH[i]){exp-=G_THRESH[i];level++;}
+      else return{level,current:exp,needed:G_THRESH[i],pct:(exp/G_THRESH[i])*100};
+    }
+    return{level:15,current:G_THRESH[13],needed:G_THRESH[13],pct:100};
+  }
+
+  let ALL=[],FILT=[],SORT='weekXP',SDIR=-1,PAGE=1;
+  const SZ=25,GUILD='GooDz5',CACHE_KEY='gz5_v5',CACHE_TTL=10*60*1000;
+  let APIKEY='';
+
+  const $=id=>document.getElementById(id);
+  function setStatus(m,t){const e=$('status-bar');e.textContent=m;e.className=t;}
+  function fmt(n){
+    if(!n||isNaN(n))return'0';
+    if(n>=1e9)return(n/1e9).toFixed(2)+'B';
+    if(n>=1e6)return(n/1e6).toFixed(2)+'M';
+    if(n>=1e3)return(n/1e3).toFixed(1)+'K';
+    return String(Math.round(n));
+  }
+  function todayKeys(n){
+    const out=[],base=Date.now()-5*3600*1000;
+    for(let i=0;i<n;i++){const d=new Date(base-i*86400*1000);out.push(d.toISOString().slice(0,10));}
+    return out;
+  }
+  function rankKey(r){
+    if(!r)return'member';
+    const l=r.toLowerCase().replace(/[\s_]+/g,'');
+    if(l.includes('guildmaster'))return'guild_master';
+    if(l==='srmod')return'srmod';
+    if(l==='team')return'team';
+    if(l==='loyal')return'loyal';
+    if(l==='stammspieler')return'stammspieler';
+    return'member';
+  }
+  function rankLabel(r){return{guild_master:'Guild Master',srmod:'Srmod',team:'Team',loyal:'Loyal',stammspieler:'Stammspieler',member:'Member'}[rankKey(r)]||'Member';}
+  function escH(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function cSave(d){try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),d}));}catch(_){}}
+  function cLoad(){
+    try{
+      const raw=sessionStorage.getItem(CACHE_KEY);if(!raw)return null;
+      const{ts,d}=JSON.parse(raw);
+      if(Date.now()-ts>CACHE_TTL)return null;
+      return{d,age:Math.round((Date.now()-ts)/1000)};
+    }catch(_){return null;}
+  }
+  function cClear(){try{sessionStorage.removeItem(CACHE_KEY);}catch(_){}}
+
+  async function hGet(url){return fetch(url,{headers:{'API-Key':APIKEY}});}
+
+  // AUTO-LOAD FROM CACHE ON PAGE OPEN
+  window.addEventListener('DOMContentLoaded',()=>{
+    const c=cLoad();
+    if(c){
+      ALL=c.d.members;
+      renderBanner(c.d.guild);
+      $('setup-hint').style.display='none';
+      $('dashboard').classList.add('on');
+      $('refresh-btn').style.display='inline-block';
+      const cb=$('cache-badge');cb.classList.add('on');cb.textContent=`🗄 Cache (${c.age}s)`;
+      doFilter();
+      setStatus(`Aus Cache geladen — ${ALL.length} Mitglieder. Klicke ↻ Refresh für aktuelle Daten.`,'success');
+    }
+  });
+
+  async function loadGuild(forceRefresh=false){
+    APIKEY=($('api-input').value||'').trim();
+    if(forceRefresh)cClear();
+    if(!forceRefresh){
+      const c=cLoad();
+      if(c){
+        ALL=c.d.members;renderBanner(c.d.guild);
+        $('setup-hint').style.display='none';$('dashboard').classList.add('on');
+        $('refresh-btn').style.display='inline-block';
+        const cb=$('cache-badge');cb.classList.add('on');cb.textContent=`🗄 Cache (${c.age}s)`;
+        doFilter();setStatus(`Aus Cache (${ALL.length} Mitglieder).`,'success');return;
+      }
+    }
+    if(!APIKEY){setStatus('Bitte API-Key eingeben.','error');return;}
+    $('cache-badge').classList.remove('on');
+    $('load-btn').disabled=true;$('refresh-btn').style.display='none';
+    $('setup-hint').style.display='none';$('dashboard').classList.remove('on');
+    setStatus('Verbinde mit Hypixel API…','info');
+    try{
+      const gr=await hGet(`https://api.hypixel.net/guild?name=${encodeURIComponent(GUILD)}`);
+      const gj=await gr.json();
+      if(!gj.success)throw new Error(gj.cause||'API Fehler — Key ungültig oder Rate-Limit?');
+      if(!gj.guild)throw new Error(`Guild "${GUILD}" nicht gefunden.`);
+      const guild=gj.guild;
+      renderBanner(guild);$('dashboard').classList.add('on');
+      const days7=todayKeys(7);
+      ALL=guild.members.map(m=>{
+        const h=m.expHistory||{};
+        return{
+          uuid:m.uuid,name:null,rank:m.rank||'Member',
+          weekXP:days7.reduce((s,k)=>s+(h[k]||0),0),
+          dailyXP:h[days7[0]]||0,
+          joined:m.joined,nameLoaded:false
+        };
+      });
+      doFilter();
+      setStatus(`Guild geladen! Lade Stats für ${ALL.length} Mitglieder…`,'info');
+      let done=0;
+      for(let i=0;i<ALL.length;i+=4){
+        await Promise.all(ALL.slice(i,i+4).map(async m=>{await fetchName(m);done++;}));
+        doFilter();
+        if(done<ALL.length)setStatus(`Lade Namen… ${done} / ${ALL.length}`,'info');
+      }
+      cSave({guild,members:ALL});
+      $('refresh-btn').style.display='inline-block';
+      setStatus(`Fertig! ${ALL.length} Mitglieder geladen.`,'success');
+    }catch(e){setStatus('Fehler: '+e.message,'error');}
+    $('load-btn').disabled=false;
+  }
+
+  function renderBanner(guild){
+    const name=guild.name||'';
+    $('g-name').textContent=name;$('g-icon').textContent=name.charAt(0).toUpperCase();
+    $('g-tag').textContent=guild.tag||'—';
+    $('g-desc').textContent=guild.description||'Keine Beschreibung.';
+    $('s-mem').textContent=`${guild.members?.length??'—'} / 125`;
+    $('s-crt').textContent=guild.created?new Date(guild.created).toLocaleDateString('de-DE',{year:'numeric',month:'short'}):'—';
+    const lv=guildLevel(guild.exp||0);
+    $('s-lvl').textContent=lv.level;$('s-xp').textContent=fmt(guild.exp||0);
+    $('xp-cur').textContent=lv.level;$('xp-nxt').textContent=lv.level<15?lv.level+1:'MAX';
+    $('xp-prg').textContent=`${fmt(lv.current)} / ${fmt(lv.needed)}`;
+    requestAnimationFrame(()=>setTimeout(()=>{$('xp-fill').style.width=lv.pct.toFixed(2)+'%';},80));
+  }
+
+  async function fetchName(m){
+    const u=m.uuid.replace(/-/g,'');
+    try{const r=await fetch(`https://api.ashcon.app/mojang/v2/user/${u}`);if(r.ok){const j=await r.json();if(j.username)m.name=j.username;}}catch(_){}
+    if(!m.name)m.name=u.slice(0,8)+'…';
+    m.nameLoaded=true;
+  }
+
+
+  function setSort(field){
+    if(SORT===field)SDIR*=-1;else{SORT=field;SDIR=-1;}
+    PAGE=1;updateSortBtns();doFilter();
+  }
+  const SORT_LABELS={weekXP:'XP Woche',dailyXP:'XP Heute',name:'Name'};
+  function updateSortBtns(){
+    for(const k of Object.keys(SORT_LABELS)){
+      const btn=$('sb-'+k);if(!btn)continue;
+      const act=SORT===k;
+      btn.classList.toggle('act',act);
+      btn.textContent=SORT_LABELS[k]+(act?(SDIR===-1?' ↓':' ↑'):'');
+    }
+  }
+
+  function doFilter(){
+    const q=($('search-input')?.value||'').toLowerCase();
+    const rf=$('rank-filter')?.value||'';
+    FILT=ALL.filter(m=>{
+      const nm=(m.name||m.uuid).toLowerCase();
+      return nm.includes(q)&&(!rf||rankKey(m.rank)===rf);
+    });
+    FILT.sort((a,b)=>{
+      if(SORT==='name')return SDIR*(a.name||a.uuid).localeCompare(b.name||b.uuid);
+      if(SORT==='dailyXP')return SDIR*((b.dailyXP||0)-(a.dailyXP||0));
+      return SDIR*((b.weekXP||0)-(a.weekXP||0));
+    });
+    const total=FILT.length,pages=Math.max(1,Math.ceil(total/SZ));
+    if(PAGE>pages)PAGE=pages;
+    const start=(PAGE-1)*SZ,slice=FILT.slice(start,start+SZ);
+    $('mbr-count').textContent=`${total} / 125`;
+    const tbody=$('tbody');
+    if(!slice.length){tbody.innerHTML='<tr class="loading-row"><td colspan="7">Keine Mitglieder gefunden.</td></tr>';$('pager').innerHTML='';return;}
+
+    tbody.innerHTML=slice.map((m,i)=>{
+      const gi=start+i+1,rk=rankKey(m.rank);
+      const nameH=m.nameLoaded
+        ?`<span class="pname">${escH(m.name||m.uuid.slice(0,8)+'…')}</span>`
+        :`<span class="spinner"></span><span class="pname" style="color:var(--muted)">${m.uuid.slice(0,6)}…</span>`;
+      const wCls=(m.weekXP||0)>100000?'hi':(m.weekXP||0)>30000?'md':'';
+      const dCls=(m.dailyXP||0)>15000?'hi':(m.dailyXP||0)>5000?'md':'';
+      const scName=m.nameLoaded&&m.name&&!m.name.includes('…')?m.name:null;
+      const scH=scName?`<a class="sc-link" href="https://sky.shiiyu.moe/stats/${encodeURIComponent(scName)}" target="_blank">SkyCrypt ↗</a>`:'<span style="color:var(--muted);font-size:11px">—</span>';
+      const joined=m.joined?new Date(m.joined).toLocaleDateString('de-DE',{year:'numeric',month:'short',day:'numeric'}):'—';
+      return`<tr>
+  <td style="color:var(--muted);font-size:11px">${gi}</td>
+  <td>${nameH}</td>
+  <td><span class="rb rb-${rk}">${rankLabel(m.rank)}</span></td>
+  <td><span class="pill ${wCls}">${fmt(m.weekXP||0)}</span></td>
+  <td><span class="pill ${dCls}">${fmt(m.dailyXP||0)}</span></td>
+  <td>${scH}</td>
+  <td style="color:var(--muted);font-size:11px">${joined}</td>
+  </tr>`;
+    }).join('');
+
+    const pag=$('pager');
+    if(pages<=1){pag.innerHTML='';return;}
+    let ph='';
+    for(let p=1;p<=pages;p++)ph+=`<button class="pg-btn${p===PAGE?' act':''}" onclick="goPage(${p})">${p}</button>`;
+    ph+=`<span class="pg-info">Seite ${PAGE} von ${pages}</span>`;
+    pag.innerHTML=ph;
+  }
+
+  function goPage(p){PAGE=p;doFilter();}
+  updateSortBtns();
+  doFilter();
+</script>
+</body>
+</html>
